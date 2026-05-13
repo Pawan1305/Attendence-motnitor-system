@@ -1,0 +1,191 @@
+{% extends 'base.html' %}
+{% block title %}Performance – AttendTrack{% endblock %}
+{% block page_title %}Performance Analysis{% endblock %}
+
+{% block content %}
+<!-- Filter -->
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-body">
+    <form method="GET" class="row g-3 align-items-end">
+      <div class="col-md-4">
+        <label class="form-label fw-semibold">Filter by Subject</label>
+        <select name="subject_id" class="form-select">
+          <option value="">-- All Subjects (Overall) --</option>
+          {% for s in subjects %}
+            <option value="{{ s['id'] }}" {% if selected_subject == s['id']|string %}selected{% endif %}>
+              {{ s['name'] }} ({{ s['code'] }})
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <button type="submit" class="btn btn-primary w-100">
+          <i class="bi bi-funnel me-1"></i>Analyse
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% set data = report if selected_subject else overall %}
+
+{% if data %}
+
+<!-- Summary Pills -->
+{% set safe_count     = data | selectattr('status', 'eq', 'Safe')     | list | length %}
+{% set warning_count  = data | selectattr('status', 'eq', 'Warning')  | list | length %}
+{% set critical_count = data | selectattr('status', 'eq', 'Critical') | list | length %}
+
+<div class="row g-3 mb-4">
+  <div class="col-4">
+    <div class="card border-0 bg-success-subtle text-center p-3 shadow-sm">
+      <div class="fs-2 fw-bold text-success">{{ safe_count }}</div>
+      <div class="small text-success">Safe (≥75%)</div>
+    </div>
+  </div>
+  <div class="col-4">
+    <div class="card border-0 bg-warning-subtle text-center p-3 shadow-sm">
+      <div class="fs-2 fw-bold text-warning">{{ warning_count }}</div>
+      <div class="small text-warning">Warning (60–74%)</div>
+    </div>
+  </div>
+  <div class="col-4">
+    <div class="card border-0 bg-danger-subtle text-center p-3 shadow-sm">
+      <div class="fs-2 fw-bold text-danger">{{ critical_count }}</div>
+      <div class="small text-danger">Critical (&lt;60%)</div>
+    </div>
+  </div>
+</div>
+
+<!-- Chart + Table -->
+<div class="row g-4">
+  <div class="col-lg-5">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header bg-white border-0 fw-semibold pt-3">
+        <i class="bi bi-pie-chart-fill me-2 text-primary"></i>Distribution
+      </div>
+      <div class="card-body d-flex align-items-center justify-content-center">
+        <canvas id="distChart" style="max-height:260px;"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-7">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-white border-0 fw-semibold pt-3">
+        <i class="bi bi-table me-2 text-primary"></i>Student Performance
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>#</th>
+                <th>Student</th>
+                <th class="text-center">Present</th>
+                <th class="text-center">Absent</th>
+                <th class="text-center">%</th>
+                <th class="text-center">Grade</th>
+                <th class="text-center">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for r in data %}
+              <tr>
+                <td>{{ loop.index }}</td>
+                <td>
+                  <div class="d-flex align-items-center gap-2">
+                    <div class="avatar-circle {% if r.status == 'Safe' %}bg-success{% elif r.status == 'Warning' %}bg-warning{% else %}bg-danger{% endif %} text-white">
+                      {{ r.name[0].upper() }}
+                    </div>
+                    <div>
+                      <div>{{ r.name }}</div>
+                      <small class="text-muted">{{ r.roll_no }}</small>
+                    </div>
+                  </div>
+                </td>
+                <td class="text-center text-success fw-semibold">{{ r.present }}</td>
+                <td class="text-center text-danger fw-semibold">{{ r.absent }}</td>
+                <td class="text-center">
+                  <div class="progress" style="height:20px;min-width:80px;">
+                    <div class="progress-bar
+                      {% if r.pct >= 75 %}bg-success{% elif r.pct >= 60 %}bg-warning{% else %}bg-danger{% endif %}"
+                      data-width="{{ r.pct }}">
+                      {{ r.pct }}%
+                    </div>
+                  </div>
+                </td>
+                <td class="text-center">
+                  <span class="badge
+                    {% if r.grade in ['A+','A'] %}bg-success
+                    {% elif r.grade in ['B','C'] %}bg-primary
+                    {% elif r.grade == 'D' %}bg-warning text-dark
+                    {% else %}bg-danger{% endif %}">
+                    {{ r.grade }}
+                  </span>
+                </td>
+                <td class="text-center">
+                  <span class="badge rounded-pill
+                    {% if r.status == 'Safe' %}bg-success-subtle text-success
+                    {% elif r.status == 'Warning' %}bg-warning-subtle text-warning
+                    {% else %}bg-danger-subtle text-danger{% endif %}">
+                    {% if r.status == 'Safe' %}<i class="bi bi-check-circle me-1"></i>
+                    {% elif r.status == 'Warning' %}<i class="bi bi-exclamation-triangle me-1"></i>
+                    {% else %}<i class="bi bi-x-circle me-1"></i>{% endif %}
+                    {{ r.status }}
+                  </span>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% else %}
+  <div class="text-center text-muted py-5">
+    <i class="bi bi-bar-chart fs-1"></i>
+    <p class="mt-3">No attendance data yet. Mark attendance first to see performance.</p>
+  </div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if data %}
+<script type="application/json" id="dist-data">[{{ safe_count }}, {{ warning_count }}, {{ critical_count }}]</script>
+<script>
+const [safe, warning, critical] = JSON.parse(document.getElementById('dist-data').textContent);
+
+new Chart(document.getElementById('distChart'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Safe (≥75%)', 'Warning (60–74%)', 'Critical (<60%)'],
+    datasets: [{
+      data: [safe, warning, critical],
+      backgroundColor: ['#198754','#ffc107','#dc3545'],
+      hoverOffset: 8
+    }]
+  },
+  options: {
+    plugins: {
+      legend: { position: 'bottom' }
+    }
+  }
+});
+
+// Apply dynamic widths from data-width attributes
+document.querySelectorAll('.progress-bar[data-width]').forEach(el => {
+  el.style.width = el.dataset.width + '%';
+});
+</script>
+{% else %}
+<script>
+document.querySelectorAll('.progress-bar[data-width]').forEach(el => {
+  el.style.width = el.dataset.width + '%';
+});
+</script>
+{% endif %}
+{% endblock %}
