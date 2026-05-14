@@ -145,6 +145,9 @@
   </div>
 </div>
 
+  <!-- Embed counts for chart (in scope here) -->
+  <script type="application/json" id="dist-data">[{{ safe_count }}, {{ warning_count }}, {{ critical_count }}]</script>
+
 {% else %}
   <div class="text-center text-muted py-5">
     <i class="bi bi-bar-chart fs-1"></i>
@@ -154,38 +157,32 @@
 {% endblock %}
 
 {% block scripts %}
-{% if data %}
-<script type="application/json" id="dist-data">[{{ safe_count }}, {{ warning_count }}, {{ critical_count }}]</script>
 <script>
-const [safe, warning, critical] = JSON.parse(document.getElementById('dist-data').textContent);
-
-new Chart(document.getElementById('distChart'), {
-  type: 'doughnut',
-  data: {
-    labels: ['Safe (≥75%)', 'Warning (60–74%)', 'Critical (<60%)'],
-    datasets: [{
-      data: [safe, warning, critical],
-      backgroundColor: ['#198754','#ffc107','#dc3545'],
-      hoverOffset: 8
-    }]
-  },
-  options: {
-    plugins: {
-      legend: { position: 'bottom' }
-    }
-  }
-});
-
 // Apply dynamic widths from data-width attributes
 document.querySelectorAll('.progress-bar[data-width]').forEach(el => {
   el.style.width = el.dataset.width + '%';
 });
+
+// Render distribution chart if data is present
+const distDataEl = document.getElementById('dist-data');
+if (distDataEl) {
+  const [safe, warning, critical] = JSON.parse(distDataEl.textContent);
+  new Chart(document.getElementById('distChart'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Safe (≥75%)', 'Warning (60–74%)', 'Critical (<60%)'],
+      datasets: [{
+        data: [safe, warning, critical],
+        backgroundColor: ['#198754','#ffc107','#dc3545'],
+        hoverOffset: 8
+      }]
+    },
+    options: {
+      plugins: {
+        legend: { position: 'bottom' }
+      }
+    }
+  });
+}
 </script>
-{% else %}
-<script>
-document.querySelectorAll('.progress-bar[data-width]').forEach(el => {
-  el.style.width = el.dataset.width + '%';
-});
-</script>
-{% endif %}
 {% endblock %}
